@@ -1,0 +1,69 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract Token is ERC20, Ownable {
+    event LogMessage(string message);
+    event HairWaxConverted(address indexed account, string brand, uint256 quantity); // Updated event name
+
+    mapping(string => uint256) public waxCosts;
+    mapping(string => uint256) public hairWaxQuantities;
+
+    constructor() ERC20("Token", "TK") Ownable(msg.sender) {
+        // Initialize token with a total supply of 100 tokens
+        _mint(msg.sender, 100);
+
+        // Initialize wax costs and quantities for Set Wet and Beardo
+        waxCosts["Set595 Wet"] = 10;
+        hairWaxQuantities["Set Wet"] = 10;
+
+        waxCosts["Beardo"] = 5;
+        hairWaxQuantities["Beardo"] = 15;
+    }
+
+    function mintTokens(address account, uint256 tokens) public onlyOwner {
+        _mint(account, tokens);
+    }
+
+    function burnTokens(uint256 tokens) public {
+        require(balanceOf(msg.sender) >= tokens, "Insufficient funds for burning tokens");
+        _burn(msg.sender, tokens);
+        emit LogMessage("Tokens burned successfully");
+    }
+
+    function transferTokens(address recipient, uint256 tokens) external {
+        require(balanceOf(msg.sender) >= tokens, "Insufficient funds for transferring tokens");
+        _transfer(msg.sender, recipient, tokens);
+    }
+
+    function redeemHairWax(string memory brand, uint256 quantity) external {
+        require(bytes(brand).length > 0, "Brand name cannot be empty");
+        require(quantity > 0, "Quantity must be greater than zero");
+
+        uint256 totalTokens = waxCosts[brand] * quantity;
+        require(balanceOf(msg.sender) >= totalTokens, "Not enough funds to redeem hair wax");
+        require(hairWaxQuantities[brand] >= quantity, "Not enough hair wax quantity for redemption");
+
+        address user = msg.sender;
+
+        _burn(user, totalTokens);
+        hairWaxQuantities[brand] -= quantity;
+
+        emit LogMessage("Hair wax redeemed successfully");
+    }
+
+    function convertToHairWax(string memory brand, uint256 quantity) external {
+        require(bytes(brand).length > 0, "Brand name cannot be empty");
+        require(quantity > 0, "Quantity must be greater than zero");
+
+        uint256 totalTokens = waxCosts[brand] * quantity;
+        require(balanceOf(msg.sender) >= totalTokens, "Not enough funds to convert to hair wax");
+
+        _burn(msg.sender, totalTokens);
+        hairWaxQuantities[brand] += quantity;
+
+        emit HairWaxConverted(msg.sender, brand, quantity);
+    }
+}
